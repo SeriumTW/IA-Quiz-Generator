@@ -4,10 +4,6 @@ import { streamObject } from 'ai';
 
 export const maxDuration = 60;
 
-// Imposta la variabile d'ambiente per l'API Gemini prima di creare l'istanza
-process.env.GOOGLE_GENERATIVE_AI_API_KEY =
-  'AIzaSyBA20yOLMLz5hejoVaKWXGfbIXUfQd_dGc';
-
 export async function POST(req: Request) {
   const { files } = await req.json();
   const firstFile = files[0].data;
