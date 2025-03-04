@@ -111,13 +111,44 @@ export default function ChatWithFiles() {
     setFiles([]);
     setQuestions([]);
   };
+  
+  const regenerateQuiz = async () => {
+    if (files.length === 0) return;
+    
+    // Mostra un toast per informare l'utente
+    toast.info('Generazione di un nuovo quiz con domande diverse in corso...');
+    
+    try {
+      // Aggiungiamo un timestamp per forzare una nuova generazione
+      const encodedFiles = await Promise.all(
+        files.map(async (file) => ({
+          name: file.name + '?t=' + Date.now(), // Aggiunge timestamp al nome del file
+          type: file.type,
+          data: await encodeFileAsBase64(file),
+        }))
+      );
+      
+      // Resetta le domande esistenti prima di inviare
+      setQuestions([]);
+      
+      // Invia per generare nuove domande
+      submit({ files: encodedFiles });
+    } catch (error) {
+      toast.error('Si è verificato un errore. Riprova più tardi.');
+    }
+  };
 
   const progress = partialQuestions ? (partialQuestions.length / 30) * 100 : 0;
 
   // Mostra il quiz se ci sono domande
   if (questions.length > 0) {
     return (
-      <Quiz title={title ?? 'Quiz'} questions={questions} clearPDF={clearPDF} />
+      <Quiz 
+        title={title ?? 'Quiz'} 
+        questions={questions} 
+        clearPDF={clearPDF}
+        regenerateQuiz={regenerateQuiz}
+      />
     );
   }
 

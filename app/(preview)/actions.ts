@@ -5,7 +5,8 @@ import { google } from '@ai-sdk/google';
 import { generateObject } from 'ai';
 import { z } from 'zod';
 
-dotenv.config();
+process.env.GOOGLE_GENERATIVE_AI_API_KEY =
+  'AIzaSyBA20yOLMLz5hejoVaKWXGfbIXUfQd_dGc';
 
 export const generateQuizTitle = async (file: string) => {
   try {

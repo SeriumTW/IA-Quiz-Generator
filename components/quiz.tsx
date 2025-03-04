@@ -18,6 +18,7 @@ type QuizProps = {
   questions: Question[];
   clearPDF: () => void;
   title: string;
+  regenerateQuiz?: () => void;
 };
 
 const QuestionCard: React.FC<{
@@ -78,6 +79,7 @@ export default function Quiz({
   questions,
   clearPDF,
   title = "Quiz",
+  regenerateQuiz = () => {},
 }: QuizProps) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<string[]>(
@@ -86,13 +88,33 @@ export default function Quiz({
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [score, setScore] = useState<number | null>(null);
   const [progress, setProgress] = useState(0);
+  const [timeRemaining, setTimeRemaining] = useState(30 * 60); // 30 minuti in secondi
 
+  // Timer per il progresso delle domande
   useEffect(() => {
     const timer = setTimeout(() => {
       setProgress((currentQuestionIndex / questions.length) * 100);
     }, 100);
     return () => clearTimeout(timer);
   }, [currentQuestionIndex, questions.length]);
+  
+  // Timer di 30 minuti
+  useEffect(() => {
+    if (isSubmitted) return;
+    
+    const timer = setInterval(() => {
+      setTimeRemaining((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          handleSubmit();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [isSubmitted]);
 
   const handleSelectAnswer = (answer: string) => {
     if (!isSubmitted) {
@@ -130,6 +152,7 @@ export default function Quiz({
     setScore(null);
     setCurrentQuestionIndex(0);
     setProgress(0);
+    setTimeRemaining(30 * 60); // Reset del timer a 30 minuti
   };
 
   const currentQuestion = questions[currentQuestionIndex];
@@ -171,9 +194,14 @@ export default function Quiz({
                       >
                         <ChevronLeft className="mr-2 h-4 w-4" /> Precedente
                       </Button>
-                      <span className="text-sm font-medium">
-                        {currentQuestionIndex + 1} / {questions.length}
-                      </span>
+                      <div className="flex flex-col items-center">
+                        <span className="text-sm font-medium">
+                          {currentQuestionIndex + 1} / {questions.length}
+                        </span>
+                        <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                          Tempo: {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}
+                        </span>
+                      </div>
                       <Button
                         onClick={handleNextQuestion}
                         disabled={answers[currentQuestionIndex] === null}
@@ -209,6 +237,14 @@ export default function Quiz({
                         className="bg-blue-600 hover:bg-blue-700 text-white w-full dark:bg-blue-700 dark:hover:bg-blue-600"
                       >
                         <FileText className="mr-2 h-4 w-4" /> Prova un altro PDF
+                      </Button>
+                    </div>
+                    <div className="flex justify-center pt-4">
+                      <Button
+                        onClick={regenerateQuiz}
+                        className="bg-green-600 hover:bg-green-700 text-white w-full dark:bg-green-700 dark:hover:bg-green-600"
+                      >
+                        <RefreshCw className="mr-2 h-4 w-4" /> Nuovo quiz con lo stesso PDF
                       </Button>
                     </div>
                   </div>
