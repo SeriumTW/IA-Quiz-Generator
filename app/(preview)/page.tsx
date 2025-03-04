@@ -31,8 +31,11 @@ export default function ChatWithFiles() {
   const [isDragging, setIsDragging] = useState(false);
   const [title, setTitle] = useState<string>();
 
+  // Aggiungiamo un controllo per prevenire invii multipli
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const {
-    submit,
+    submit: originalSubmit,
     object: partialQuestions,
     isLoading,
   } = experimental_useObject({
@@ -42,9 +45,11 @@ export default function ChatWithFiles() {
     onError: (error) => {
       toast.error('Impossibile generare il quiz. Riprova più tardi.');
       setFiles([]);
+      setIsSubmitting(false);
     },
     onFinish: ({ object }) => {
       setQuestions(object ?? []);
+      setIsSubmitting(false);
     },
   });
 
@@ -83,6 +88,12 @@ export default function ChatWithFiles() {
 
   const handleSubmitWithFiles = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    // Previeni invii multipli
+    if (isLoading) {
+      return;
+    }
+
     try {
       const encodedFiles = await Promise.all(
         files.map(async (file) => ({
@@ -111,13 +122,14 @@ export default function ChatWithFiles() {
     setFiles([]);
     setQuestions([]);
   };
-  
+
   const regenerateQuiz = async () => {
-    if (files.length === 0) return;
-    
+    // Previeni invii multipli e verifica che ci siano file
+    if (files.length === 0 || isLoading) return;
+
     // Mostra un toast per informare l'utente
     toast.info('Generazione di un nuovo quiz con domande diverse in corso...');
-    
+
     try {
       // Aggiungiamo un timestamp per forzare una nuova generazione
       const encodedFiles = await Promise.all(
@@ -127,10 +139,10 @@ export default function ChatWithFiles() {
           data: await encodeFileAsBase64(file),
         }))
       );
-      
+
       // Resetta le domande esistenti prima di inviare
       setQuestions([]);
-      
+
       // Invia per generare nuove domande
       submit({ files: encodedFiles });
     } catch (error) {
@@ -141,13 +153,24 @@ export default function ChatWithFiles() {
   const progress = partialQuestions ? (partialQuestions.length / 30) * 100 : 0;
 
   // Mostra il quiz se ci sono domande
+  // Wrapper personalizzato per la funzione submit che impedisce invii multipli
+  const submit = (data: any) => {
+    if (isLoading || isSubmitting) return;
+    setIsSubmitting(true);
+    originalSubmit(data);
+  };
+
+  // Controlla sia isLoading che isSubmitting per maggiore sicurezza
+  const isGenerating = isLoading || isSubmitting;
+
   if (questions.length > 0) {
     return (
-      <Quiz 
-        title={title ?? 'Quiz'} 
-        questions={questions} 
+      <Quiz
+        title={title ?? 'Quiz'}
+        questions={questions}
         clearPDF={clearPDF}
         regenerateQuiz={regenerateQuiz}
+        isGenerating={isGenerating}
       />
     );
   }
@@ -157,17 +180,25 @@ export default function ChatWithFiles() {
       className='min-h-[100dvh] w-full flex justify-center bg-gradient-to-b from-blue-50 to-white dark:from-blue-950 dark:to-gray-900'
       onDragOver={(e) => {
         e.preventDefault();
-        setIsDragging(true);
+        if (!isLoading) setIsDragging(true);
       }}
-      onDragExit={() => setIsDragging(false)}
-      onDragEnd={() => setIsDragging(false)}
-      onDragLeave={() => setIsDragging(false)}
+      onDragExit={() => {
+        if (!isLoading) setIsDragging(false);
+      }}
+      onDragEnd={() => {
+        if (!isLoading) setIsDragging(false);
+      }}
+      onDragLeave={() => {
+        if (!isLoading) setIsDragging(false);
+      }}
       onDrop={(e) => {
         e.preventDefault();
-        setIsDragging(false);
-        handleFileChange({
-          target: { files: e.dataTransfer.files },
-        } as React.ChangeEvent<HTMLInputElement>);
+        if (!isLoading) {
+          setIsDragging(false);
+          handleFileChange({
+            target: { files: e.dataTransfer.files },
+          } as React.ChangeEvent<HTMLInputElement>);
+        }
       }}
     >
       <AnimatePresence>
@@ -203,20 +234,48 @@ export default function ChatWithFiles() {
           </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmitWithFiles} className='space-y-4'>
+          <form
+            onSubmit={handleSubmitWithFiles}
+            className='space-y-4'
+            onClick={(e) => isGenerating && e.preventDefault()}
+          >
             <div
-              className={`relative flex flex-col items-center justify-center border-2 border-dashed border-blue-300 dark:border-blue-700 rounded-lg p-6 transition-colors hover:border-blue-500 bg-blue-50 dark:bg-blue-950/50`}
+              className={`relative flex flex-col items-center justify-center border-2 border-dashed ${
+                isGenerating
+                  ? 'border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 opacity-60 cursor-not-allowed pointer-events-none'
+                  : 'border-blue-300 dark:border-blue-700 hover:border-blue-500 bg-blue-50 dark:bg-blue-950/50'
+              } rounded-lg p-6 transition-colors`}
             >
               <input
                 type='file'
                 onChange={handleFileChange}
                 accept='application/pdf'
                 className='absolute inset-0 opacity-0 cursor-pointer'
+                disabled={isGenerating}
+                style={{ pointerEvents: isGenerating ? 'none' : 'auto' }}
               />
-              <FileUp className='h-8 w-8 mb-2 text-blue-600 dark:text-blue-400' />
-              <p className='text-sm text-muted-foreground text-center'>
+              <FileUp
+                className={`h-8 w-8 mb-2 ${
+                  isGenerating
+                    ? 'text-gray-400 dark:text-gray-600'
+                    : 'text-blue-600 dark:text-blue-400'
+                }`}
+              />
+              <p
+                className={`text-sm text-center ${
+                  isGenerating
+                    ? 'text-gray-500 dark:text-gray-500'
+                    : 'text-muted-foreground'
+                }`}
+              >
                 {files.length > 0 ? (
-                  <span className='font-medium text-foreground'>
+                  <span
+                    className={`font-medium ${
+                      isGenerating
+                        ? 'text-gray-600 dark:text-gray-400'
+                        : 'text-foreground'
+                    }`}
+                  >
                     {files[0].name}
                   </span>
                 ) : (
@@ -226,10 +285,17 @@ export default function ChatWithFiles() {
             </div>
             <Button
               type='submit'
-              className='w-full bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-700 dark:hover:bg-blue-600'
-              disabled={files.length === 0}
+              className={`w-full ${
+                isGenerating
+                  ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed dark:bg-gray-700 dark:hover:bg-gray-700 pointer-events-none'
+                  : 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600'
+              } text-white`}
+              disabled={files.length === 0 || isGenerating}
+              aria-disabled={isGenerating}
+              onClick={(e) => isGenerating && e.preventDefault()}
+              style={{ pointerEvents: isGenerating ? 'none' : 'auto' }}
             >
-              {isLoading ? (
+              {isGenerating ? (
                 <span className='flex items-center space-x-2'>
                   <Loader2 className='h-4 w-4 animate-spin' />
                   <span>Generazione Quiz in corso...</span>
@@ -240,7 +306,7 @@ export default function ChatWithFiles() {
             </Button>
           </form>
         </CardContent>
-        {isLoading && (
+        {isGenerating && (
           <CardFooter className='flex flex-col space-y-4'>
             <div className='w-full space-y-1'>
               <div className='flex justify-between text-sm text-muted-foreground'>
@@ -253,7 +319,7 @@ export default function ChatWithFiles() {
               <div className='grid grid-cols-6 sm:grid-cols-6 items-center justify-center space-x-2 text-sm'>
                 <div
                   className={`h-2 w-2 rounded-full ${
-                    isLoading ? 'bg-yellow-500/50 animate-pulse' : 'bg-muted'
+                    isGenerating ? 'bg-yellow-500/50 animate-pulse' : 'bg-muted'
                   }`}
                 />
                 <span className='text-muted-foreground text-center col-span-full'>

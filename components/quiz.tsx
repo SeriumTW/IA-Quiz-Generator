@@ -9,6 +9,7 @@ import {
   X,
   RefreshCw,
   FileText,
+  Loader2,
 } from "lucide-react";
 import QuizScore from "./score";
 import QuizReview from "./quiz-overview";
@@ -19,6 +20,7 @@ type QuizProps = {
   clearPDF: () => void;
   title: string;
   regenerateQuiz?: () => void;
+  isGenerating?: boolean;
 };
 
 const QuestionCard: React.FC<{
@@ -80,6 +82,7 @@ export default function Quiz({
   clearPDF,
   title = "Quiz",
   regenerateQuiz = () => {},
+  isGenerating = false,
 }: QuizProps) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<string[]>(
@@ -241,10 +244,29 @@ export default function Quiz({
                     </div>
                     <div className="flex justify-center pt-4">
                       <Button
-                        onClick={regenerateQuiz}
-                        className="bg-green-600 hover:bg-green-700 text-white w-full dark:bg-green-700 dark:hover:bg-green-600"
+                        onClick={(e) => {
+                          if (isGenerating) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            return;
+                          }
+                          regenerateQuiz();
+                        }}
+                        className={`bg-green-600 hover:bg-green-700 text-white w-full dark:bg-green-700 dark:hover:bg-green-600 ${
+                          isGenerating ? 'pointer-events-none cursor-not-allowed opacity-70' : ''
+                        }`}
+                        disabled={isGenerating}
+                        style={{ pointerEvents: isGenerating ? 'none' : 'auto' }}
                       >
-                        <RefreshCw className="mr-2 h-4 w-4" /> Nuovo quiz con lo stesso PDF
+                        {isGenerating ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generazione in corso...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="mr-2 h-4 w-4" /> Nuovo quiz con lo stesso PDF
+                          </>
+                        )}
                       </Button>
                     </div>
                   </div>

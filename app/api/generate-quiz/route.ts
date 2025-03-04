@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     '\n\nPROCESSO OBBLIGATORIO DA SEGUIRE:' +
     "\n1. LEGGI PRIMA tutto il documento dall'inizio alla fine, senza creare ancora domande." +
     '\n2. DIVIDI mentalmente il documento in 5 sezioni di uguale lunghezza: inizio, primo-centro, centro, secondo-centro e fine.' +
-    '\n3. SELEZIONA ESATTAMENTE 6 concetti da CIASCUNA delle 5 sezioni, concentrandoti su informazioni specifiche e distanti tra loro all\'interno di ogni sezione.' +
+    "\n3. SELEZIONA ESATTAMENTE 6 concetti da CIASCUNA delle 5 sezioni, concentrandoti su informazioni specifiche e distanti tra loro all'interno di ogni sezione." +
     '\n4. MESCOLA accuratamente questi concetti e crea le domande in ordine completamente casuale, non sequenziale.' +
     '\n5. ASSICURATI che le domande coprano temi e concetti DIVERSI tra loro, evitando di chiedere la stessa informazione in modi diversi.' +
     "\n6. VERIFICA di aver coperto l'intero documento in modo uniforme, senza favorire nessuna sezione." +
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     "\n1. Prima di tutto, leggi COMPLETAMENTE il documento dall'inizio alla fine." +
     '\n2. Dividi il documento in 5 sezioni di uguale lunghezza (non solo inizio, metà e fine, ma 5 sezioni distinte).' +
     '\n3. Seleziona 6 domande da CIASCUNA sezione, concentrandoti su informazioni distanti tra loro dentro ogni sezione.' +
-    '\n4. MESCOLA COMPLETAMENTE l\'ordine delle domande in modo che non seguano l\'ordine del documento.' +
+    "\n4. MESCOLA COMPLETAMENTE l'ordine delle domande in modo che non seguano l'ordine del documento." +
     '\n5. VARIA il tipo di domande, ma assicurati che tutte siano basate su informazioni presenti nel documento.' +
     '\n\nATTENZIONE: Due problemi principali da evitare:' +
     '\n1. NON concentrarti solo su alcune parti del documento. Devi distribuire UNIFORMEMENTE le domande su TUTTO il documento.' +
@@ -45,10 +45,10 @@ export async function POST(req: Request) {
   const timestamp = Date.now().toString();
   const randomNum = Math.floor(Math.random() * 1000000).toString();
   const randomBytes = Array.from(crypto.getRandomValues(new Uint8Array(8)))
-    .map(b => b.toString(16).padStart(2, '0'))
+    .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
   const randomSeed = timestamp + '-' + randomNum + '-' + randomBytes;
-  
+
   // Aggiunta di temperatura alta per aumentare la diversità nelle risposte
   const result = streamObject({
     model: google('gemini-1.5-pro-latest'),
@@ -56,7 +56,9 @@ export async function POST(req: Request) {
     messages: [
       {
         role: 'system',
-        content: systemPrompt + `\n\nUtilizza questo seed casuale come base per la randomizzazione: ${randomSeed}. PROBLEMA CRITICO DA RISOLVERE: le generazioni precedenti producevano quiz quasi identici. DEVI ASSOLUTAMENTE creare domande COMPLETAMENTE DIVERSE e in un ORDINE TOTALMENTE DIVERSO rispetto a qualsiasi generazione precedente. Questo è il requisito più importante in assoluto.
+        content:
+          systemPrompt +
+          `\n\nUtilizza questo seed casuale come base per la randomizzazione: ${randomSeed}. PROBLEMA CRITICO DA RISOLVERE: le generazioni precedenti producevano quiz quasi identici. DEVI ASSOLUTAMENTE creare domande COMPLETAMENTE DIVERSE e in un ORDINE TOTALMENTE DIVERSO rispetto a qualsiasi generazione precedente. Questo è il requisito più importante in assoluto.
 
 REGOLE AGGIUNTIVE OBBLIGATORIE:
 1. Cambia RADICALMENTE l'ordine delle 30 domande rispetto a qualsiasi generazione precedente
@@ -71,7 +73,9 @@ REGOLE AGGIUNTIVE OBBLIGATORIE:
         content: [
           {
             type: 'text',
-            text: userPrompt + `\n\nISTRUZIONI CRITICHE PER LA DIVERSIFICAZIONE: Usa questo seed per garantire massima variabilità: ${randomSeed}. 
+            text:
+              userPrompt +
+              `\n\nISTRUZIONI CRITICHE PER LA DIVERSIFICAZIONE: Usa questo seed per garantire massima variabilità: ${randomSeed}.
 
 PROBLEMA DA RISOLVERE: Le generazioni precedenti creavano quiz troppo simili con le stesse domande nelle stesse posizioni.
 
